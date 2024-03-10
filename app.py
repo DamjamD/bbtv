@@ -1,71 +1,76 @@
-import csv
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
+from data.geo import Location
 from faker import Faker
-import random
-import string
-import datetime
+from datetime import datetime, timedelta
 
 fake = Faker()
 
-def generate_fake_data():
-    platform_choices = ['YouTube', 'Facebook', 'TikTok']
-    content_type_choices = ['video', 'image', 'text']
-    gender_choices = ['Male', 'Female', 'Other']
-    device_choices = ['mobile', 'desktop', 'tablet']
+end_date = datetime.now()  # Today's date
+start_date = end_date - timedelta(days=365 * 4) 
+content_setups = [
+    "10 Tips for Healthy Living",
+    "Top 5 Travel Destinations of the Year",
+    "Beginner's Guide to Python Programming",
+    "Fashion Trends for Spring/Summer",
+    "Delicious Recipes for a Weekend Brunch",
+    "Mindfulness Meditation Techniques",
+    "Latest Tech Gadgets and Innovations",
+    "How to Boost Your Productivity",
+    "Exploring the Wonders of the Universe",
+    "Ultimate Guide to Fitness and Exercise",
+    "DIY Home Decor Ideas",
+    "Inspirational Quotes for Daily Motivation",
+    "Financial Planning for Beginners",
+    "Gardening Tips and Tricks",
+    "Mastering Photography: Essential Techniques",
+    "Effective Communication Skills",
+    "Art and Creativity: Unleash Your Potential",
+    "The Power of Positive Thinking",
+    "Healthy Eating Habits for Weight Loss",
+    "Travel Hacks for Budget-Friendly Adventures"
+]
+content_setup_probs = np.random.dirichlet(np.ones(len(content_setups)))
 
-    for _ in range(100000000):  # Generating 100 million rows
-        yield {
-            'Platform': random.choice(platform_choices),
-            'User ID': ''.join(random.choices(string.ascii_letters + string.digits, k=10)),
+def new_city(): 
+    return Location.random_location()
+
+def generate_fake_data(num_rows):
+    data = []
+    for _ in range(num_rows):
+        location = new_city()
+        data.append({
+            'Platform': np.random.choice(['YouTube', 'Facebook', 'TikTok', 'Instagram', 'Twitter'], p=[0.4, 0.2, 0.2, 0.1, 0.1]),
+            'User_ID': fake.uuid4(),
             'Username': fake.user_name(),
-            'Age': random.randint(18, 60),
-            'Gender': random.choice(gender_choices),
-            'Location': fake.country(),
+            'Age': int(np.round(np.random.beta(8, 5) * 70 + 1)),
+            'Gender': np.random.choice(['Male', 'Female', 'Other'], p=[0.45, 0.45, 0.1]),
             'Language': fake.language_code(),
-            'Followers/Subscribers': random.randint(0, 1000000),
-            'Likes/Reactions': random.randint(0, 100000),
-            'Shares/Retweets': random.randint(0, 10000),
-            'Comments': random.randint(0, 10000),
-            'Engagement Rate': round(random.uniform(0, 10), 2),
-            'Content Type': random.choice(content_type_choices),
-            'Category': fake.word(),
-            'Views': random.randint(0, 10000000),
-            'Impressions': random.randint(0, 10000000),
-            'Reach': random.randint(0, 10000000),
-            'CTR': round(random.uniform(0, 10), 2),
-            'Posting Frequency': random.randint(1, 30),
-            'Time of Posting': fake.date_time_this_year(),
-            'Audience Interests': fake.words(nb=random.randint(1, 5)),
-            'Audience Behavior': {
-                'Average Watch Time': random.randint(0, 600),
-                'Bounce Rate': round(random.uniform(0, 100), 2)
-            },
-            'External Referral Source': fake.url(),
-            'Device Used': random.choice(device_choices),
-            'Monetization': {
-                'Ad Revenue': round(random.uniform(0, 1000), 2),
-                'Sponsored Content Revenue': round(random.uniform(0, 1000), 2),
-                'Affiliate Sales': round(random.uniform(0, 1000), 2)
-            },
-            'User Actions': {
-                'Clicks': random.randint(0, 1000),
-                'Participation': {
-                    'Polls': random.randint(0, 100),
-                    'Surveys': random.randint(0, 100),
-                    'Live Streams': random.randint(0, 100)
-                }
-            }
-        }
+            'Watch_Time_Minutes': np.random.randint(1, 5000),
+            'Most_Viewed_Content': fake.sentence(),
+            'Comments': np.random.randint(0, 2),
+            'Shares': np.random.randint(0, 2),
+            'Likes_Reactions': np.random.randint(0, 2),
+            'Followers_Subscribers': np.random.randint(0, 2),
+            'Device_Used': np.random.choice(['Mobile', 'Desktop', 'Tablet'], p=[0.6, 0.3, 0.1]),
+            'Timestamp' : fake.date_time_between(start_date=start_date, end_date=end_date),
+            'Content_Type': np.random.choice(['Video', 'Image', 'Text'], p=[0.4, 0.4, 0.2]),
+            'Content_Category': np.random.choice(['Entertainment', 'News', 'Technology', 'Fashion', 'Food', 'Travel'], p=[0.2, 0.2, 0.2, 0.2, 0.1, 0.1]),
+            'Referral_Source': np.random.choice(['Direct', 'Search Engine', 'Social Media', 'Referral Link'], p=[0.3, 0.3, 0.2, 0.2]),
+            'Monetization': np.random.choice(['Ad Revenue', 'Sponsored Content', 'Affiliate Marketing'], p=[0.6, 0.3, 0.1]),
+            'payback':  np.random.uniform(0, 0.05),
+            'Content_Setup': np.random.choice(content_setups, p=content_setup_probs),
+            'Views': np.random.randint(0, 3),
+            'City': location['City'],
+            'State': location['State'],
+            'Latitude': location['Latitude'],
+            'Longitude': location['Longitude'],
+            'Country': "Canada"
+        })
+    return data
 
-def write_to_csv(filename, data):
-    with open(filename, 'w', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=data[0].keys())
-        writer.writeheader()
-        writer.writerows(data)
-
-if __name__ == '__main__':
-    data_generator = generate_fake_data()
-    batch_size = 100000  # Writing data in batches to prevent memory overflow
-    for i in range(1, 10001):  # Generating 1 billion rows in batches
-        print(f"Generating batch {i}")
-        batch_data = [next(data_generator) for _ in range(batch_size)]
-        write_to_csv(f'dataset_batch_{i}.csv', batch_data)
+num_rows = 564234
+df = pd.DataFrame(generate_fake_data(num_rows))
+#print(df)
+df.to_csv('DATA_SET/fake_data_canada.csv', index=False)
